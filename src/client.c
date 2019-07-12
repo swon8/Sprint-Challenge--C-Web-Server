@@ -48,6 +48,34 @@ urlinfo_t *parse_url(char *url)
   ///////////////////
   // IMPLEMENT ME! //
   ///////////////////
+  if (strstr(url, "http://")){
+    hostname = strdup(url + 7);
+  }
+  else if (strstr(url, "https://")){
+    hostname = strdup(url + 8);
+  }
+  else{
+    hostname = strdup(url);
+  }
+
+  if (strchr(hostname, '/')){
+    path = strchr(hostname, '/') + 1;
+    *(path - 1) = '\0';
+  }
+  else{
+    path = "";
+  }
+
+  if (strchr(hostname, ':')){
+    port = strchr(hostname, ':') + 1;
+    *(port - 1) = '\0';
+  }
+  else{
+    port = "80";
+  }
+  urlinfo->path = path;
+  urlinfo->port = port;
+  urlinfo->hostname = hostname;
 
   return urlinfo;
 }
@@ -71,6 +99,16 @@ int send_request(int fd, char *hostname, char *port, char *path)
   ///////////////////
   // IMPLEMENT ME! //
   ///////////////////
+  rv = sprintf(request, 
+    "GET /%s HTTP/1.1\n"
+    "Host: %s:%s\n"
+    "Connection: close\n"
+    "\n", 
+    path, hostname, port);
+  rv = send(fd, request, rv, 0);
+  if (rv < 0) {
+      perror("send");
+  }
 
   return 0;
 }
@@ -96,6 +134,23 @@ int main(int argc, char *argv[])
   ///////////////////
   // IMPLEMENT ME! //
   ///////////////////
+  urlinfo_t *urlinfo= malloc (sizeof(urlinfo_t));
+  urlinfo= parse_url(argv[1]);
+  sockfd=get_socket(urlinfo->hostname, urlinfo->port);
+  numbytes= send_request(sockfd, urlinfo->hostname, urlinfo->port, urlinfo->path);
+  while((numbytes=recv(sockfd,buf, BUFSIZE-1,0))>0)
+  {
+    printf("%s\n",buf);
+  }
+  close(sockfd);
+  urlinfo->port=NULL;
+  urlinfo->hostname=NULL;
+  urlinfo->path=NULL;
+
+  free(urlinfo->port);
+  free(urlinfo->path);
+  free(urlinfo->hostname);
+  free(urlinfo);
 
   return 0;
 }
